@@ -1,8 +1,8 @@
-﻿// PhotoPanelTab.cs — плагин Mission Planner "PhotoPanel 1.2 (tab)" (для MP 1.3.83)
-// Вкладка "Фото" на экране Flight Data (внизу слева, рядом с Quick/Actions/...):
-// счётчик фотоснимков, телеметрия, средние интервалы съёмки.
+// PhotoPanelWindow.cs — плагин Mission Planner "PhotoPanel 1.2 (window)" (для MP 1.3.83)
+// Плавающее окно поверх Flight Data: счётчик фотоснимков, телеметрия, средние
+// интервалы съёмки. Окно можно свободно перетаскивать и держать поверх карты/HUD.
 // Установка: положить в C:\Program Files (x86)\Mission Planner\plugins\ и перезапустить MP.
-// ВАЖНО: не держать в plugins одновременно с PhotoPanel.cs (оконной версией) —
+// ВАЖНО: не держать в plugins одновременно с Photopanel.cs (вариант со вкладкой) —
 // классы конфликтуют по имени namespace/подпискам, оставь один файл.
 
 using System;
@@ -11,11 +11,11 @@ using System.Windows.Forms;
 using MissionPlanner;
 using MissionPlanner.Plugin;
 
-namespace PhotoPanelTabPlugin
+namespace PhotoPanelWindowPlugin
 {
-    public class PhotoPanelTab : Plugin
+    public class PhotoPanelWindow : Plugin
     {
-        private TabPage _tab;
+        private Form _form;
         private Label _lblCount;
         private Label _lblPhotoTime;
         private Label _lblLastPhoto;
@@ -38,7 +38,7 @@ namespace PhotoPanelTabPlugin
         private double _vdop = -1;
         private object _lock = new object();
 
-        public override string Name { get { return "Photo Panel Tab"; } }
+        public override string Name { get { return "Photo Panel Window"; } }
         public override string Version { get { return "1.2"; } }
         public override string Author { get { return "andrewkena"; } }
 
@@ -100,15 +100,22 @@ namespace PhotoPanelTabPlugin
                     (byte)Host.comPort.compidcurrent,
                     false);
 
-                // Вкладка создаётся в главном потоке
+                // Окно создаётся в главном потоке
                 MainV2.instance.BeginInvoke((MethodInvoker)delegate
                 {
-                    AddTab();
+                    ShowWindow();
+
+                    // если окно свернуть (Win+стрелка вниз и т.п.), у него нет
+                    // ни кнопки в панели задач, ни пункта в системном меню MP —
+                    // поэтому добавляем свой пункт восстановления в контекстное
+                    // меню карты (ПКМ по карте на экране Flight Data)
+                    Host.FDMenuMap.Items.Add("PhotoPanel: показать окно", null,
+                        delegate { RestoreWindow(); });
                 });
             }
             catch (Exception ex)
             {
-                Console.WriteLine("PhotoPanelTab Loaded error: " + ex.ToString());
+                Console.WriteLine("PhotoPanelWindow Loaded error: " + ex.ToString());
             }
 
             return true;
@@ -116,58 +123,61 @@ namespace PhotoPanelTabPlugin
 
         public override bool Loop()
         {
-            if (_tab == null || _tab.IsDisposed)
+            if (_form == null || _form.IsDisposed)
                 return true;
 
             try
             {
-                MainV2.instance.BeginInvoke((MethodInvoker)delegate
-                {
-                    EnsureTabAttached();
-                    UpdateLabels();
-                });
+                MainV2.instance.BeginInvoke((MethodInvoker)delegate { UpdateLabels(); });
             }
             catch (Exception) { }
 
             return true;
         }
 
-        // Mission Planner при подключении (например запуск SITL) вызывает
-        // FlightData.Activate() -> updateDisplayView() -> loadTabControlActions(),
-        // где tabControlactions.TabPages.Clear() сносит все вкладки и восстанавливает
-        // только свой встроенный список — наша вкладка туда не входит и пропадает.
-        // Поэтому на каждый тик проверяем и возвращаем её обратно.
-        private void EnsureTabAttached()
-        {
-            Control[] found = MainV2.instance.FlightData.Controls.Find("tabControlactions", true);
-            if (found.Length == 0)
-                return;
-
-            TabControl tc = (TabControl)found[0];
-            if (!tc.TabPages.Contains(_tab))
-                tc.TabPages.Add(_tab);
-        }
-
         public override bool Exit()
         {
+            try
+            {
+                if (_form != null && !_form.IsDisposed)
+                    MainV2.instance.BeginInvoke((MethodInvoker)delegate { _form.Close(); });
+            }
+            catch (Exception) { }
+
             return true;
         }
 
         // ---------- UI (только главный поток) ----------
 
-        private void AddTab()
+        private void RestoreWindow()
         {
-            Control[] found = MainV2.instance.FlightData.Controls.Find("tabControlactions", true);
-            if (found.Length == 0)
+            if (_form == null || _form.IsDisposed)
             {
-                Console.WriteLine("PhotoPanelTab: tabControlactions не найден");
+                ShowWindow();
                 return;
             }
-            TabControl tc = (TabControl)found[0];
 
-            _tab = new TabPage("PhotoPanel 1.2");
-            _tab.BackColor = Color.FromArgb(38, 39, 40);
-            _tab.AutoScroll = true; // если блок ниже по высоте — появится прокрутка
+            if (_form.WindowState == FormWindowState.Minimized)
+                _form.WindowState = FormWindowState.Normal;
+
+            _form.Show(MainV2.instance);
+            _form.BringToFront();
+            _form.Activate();
+        }
+
+        private void ShowWindow()
+        {
+            _form = new Form();
+            _form.Text = "PhotoPanel 1.2";
+            _form.BackColor = Color.FromArgb(38, 39, 40);
+            _form.FormBorderStyle = FormBorderStyle.SizableToolWindow;
+            _form.StartPosition = FormStartPosition.Manual;
+            _form.ClientSize = new Size(360, 400);
+            _form.MinimumSize = new Size(300, 300);
+            _form.ShowInTaskbar = false;
+
+            Rectangle host = MainV2.instance.Bounds;
+            _form.Location = new Point(host.Left + 20, host.Bottom - _form.Height - 60);
 
             Font big = new Font("Segoe UI", 22, FontStyle.Bold);
             Font normal = new Font("Segoe UI", 10);
@@ -231,24 +241,31 @@ namespace PhotoPanelTabPlugin
             y += 25;
             _lblWpDist = MakeLabel("Расстояние до следующего WP: —", normal, 10, y);
 
-            _tab.Controls.Add(caption);
-            _tab.Controls.Add(_lblCount);
-            _tab.Controls.Add(btnReset);
-            _tab.Controls.Add(line1);
-            _tab.Controls.Add(_lblPhotoTime);
-            _tab.Controls.Add(_lblLastPhoto);
-            _tab.Controls.Add(_lblAlt);
-            _tab.Controls.Add(_lblSpeed);
-            _tab.Controls.Add(line2);
-            _tab.Controls.Add(_lblSats);
-            _tab.Controls.Add(line3);
-            _tab.Controls.Add(_lblAvgTime);
-            _tab.Controls.Add(_lblAvgDist);
-            _tab.Controls.Add(line4);
-            _tab.Controls.Add(_lblCurWp);
-            _tab.Controls.Add(_lblWpDist);
+            _form.Controls.Add(caption);
+            _form.Controls.Add(_lblCount);
+            _form.Controls.Add(btnReset);
+            _form.Controls.Add(line1);
+            _form.Controls.Add(_lblPhotoTime);
+            _form.Controls.Add(_lblLastPhoto);
+            _form.Controls.Add(_lblAlt);
+            _form.Controls.Add(_lblSpeed);
+            _form.Controls.Add(line2);
+            _form.Controls.Add(_lblSats);
+            _form.Controls.Add(line3);
+            _form.Controls.Add(_lblAvgTime);
+            _form.Controls.Add(_lblAvgDist);
+            _form.Controls.Add(line4);
+            _form.Controls.Add(_lblCurWp);
+            _form.Controls.Add(_lblWpDist);
 
-            tc.TabPages.Add(_tab);
+            // не убивать поток апдейтов при закрытии — просто скрыть окно
+            _form.FormClosing += delegate(object sender, FormClosingEventArgs e)
+            {
+                e.Cancel = true;
+                _form.Hide();
+            };
+
+            _form.Show(MainV2.instance);
         }
 
         private Label MakeLine(int y)
