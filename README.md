@@ -1,4 +1,4 @@
-# PhotoPanel 1.21_10.07.2026 — плагин Mission Planner
+# PhotoPanel 1.22_10.07.2026 — плагин Mission Planner
 
 Плагин для Mission Planner (проверено на MP 1.3.83), который считает количество
 сделанных фотоснимков во время полёта и показывает телеметрию, связанную со
@@ -7,7 +7,7 @@
 следующей путевой точке.
 
 Автор: andrewkena
-Версия: 1.21_10.07.2026
+Версия: 1.22_10.07.2026
 
 ## Два варианта плагина
 
@@ -19,7 +19,7 @@
 ### 1. [Photopanel.cs](PhotoPanel/Photopanel.cs) — вариант со вкладкой
 <img width="1280" height="662" alt="photo_2026-07-05_23-45-02" src="https://github.com/user-attachments/assets/33b94ddf-93b2-4b00-afdd-ebbc966510b9" />
 
-Добавляет вкладку **"PhotoPanel 1.21_10.07.2026"** на экране Flight Data, внизу слева,
+Добавляет вкладку **"PhotoPanel"** на экране Flight Data, внизу слева,
 рядом со стандартными вкладками Quick/Actions/Servo/... .
 
 Устойчив к запуску SITL: Mission Planner при подключении иногда пересобирает
