@@ -1,4 +1,4 @@
-﻿// PhotoPanelTab.cs — плагин Mission Planner "PhotoPanel 1.2 (tab)" (для MP 1.3.83)
+﻿// PhotoPanelTab.cs — плагин Mission Planner "PhotoPanel 1.21_10.07.2026 (tab)" (для MP 1.3.83)
 // Вкладка "Фото" на экране Flight Data (внизу слева, рядом с Quick/Actions/...):
 // счётчик фотоснимков, телеметрия, средние интервалы съёмки.
 // Установка: положить в C:\Program Files (x86)\Mission Planner\plugins\ и перезапустить MP.
@@ -39,7 +39,7 @@ namespace PhotoPanelTabPlugin
         private object _lock = new object();
 
         public override string Name { get { return "Photo Panel Tab"; } }
-        public override string Version { get { return "1.2"; } }
+        public override string Version { get { return "1.21_10.07.2026"; } }
         public override string Author { get { return "andrewkena"; } }
 
         public override bool Init()
@@ -165,7 +165,7 @@ namespace PhotoPanelTabPlugin
             }
             TabControl tc = (TabControl)found[0];
 
-            _tab = new TabPage("PhotoPanel 1.2");
+            _tab = new TabPage("PhotoPanel 1.21_10.07.2026");
             _tab.BackColor = Color.FromArgb(38, 39, 40);
             _tab.AutoScroll = true; // если блок ниже по высоте — появится прокрутка
 
@@ -231,6 +231,86 @@ namespace PhotoPanelTabPlugin
             y += 25;
             _lblWpDist = MakeLabel("Расстояние до следующего WP: —", normal, 10, y);
 
+            y += 30;
+            Label line5 = MakeLine(y);
+
+            y += 15;
+            Button btnStartTime = new Button();
+            btnStartTime.Text = "Фото по времени";
+            btnStartTime.Location = new Point(10, y);
+            btnStartTime.Size = new Size(150, 28);
+            btnStartTime.FlatStyle = FlatStyle.Flat;
+            btnStartTime.ForeColor = Color.WhiteSmoke;
+
+            NumericUpDown nudTime = new NumericUpDown();
+            nudTime.Location = new Point(170, y + 3);
+            nudTime.Size = new Size(60, 22);
+            nudTime.DecimalPlaces = 1;
+            nudTime.Increment = 0.1M;
+            nudTime.Minimum = 1.5M;
+            nudTime.Maximum = 300M;
+            nudTime.Value = 1.5M;
+
+            Label lblTimeUnit = MakeLabel("с", normal, 236, y + 4);
+
+            btnStartTime.Click += delegate
+            {
+                try
+                {
+                    Host.comPort.doCommand((byte)Host.comPort.sysidcurrent, (byte)Host.comPort.compidcurrent,
+                        MAVLink.MAV_CMD.IMAGE_START_CAPTURE, 0, (float)nudTime.Value, 0, 0, 0, 0, 0, false);
+                }
+                catch (Exception ex) { Console.WriteLine("PhotoPanel: старт по времени — " + ex.Message); }
+            };
+
+            y += 34;
+            Button btnStartDist = new Button();
+            btnStartDist.Text = "Фото по расстоянию";
+            btnStartDist.Location = new Point(10, y);
+            btnStartDist.Size = new Size(150, 28);
+            btnStartDist.FlatStyle = FlatStyle.Flat;
+            btnStartDist.ForeColor = Color.WhiteSmoke;
+
+            NumericUpDown nudDist = new NumericUpDown();
+            nudDist.Location = new Point(170, y + 3);
+            nudDist.Size = new Size(60, 22);
+            nudDist.DecimalPlaces = 0;
+            nudDist.Increment = 1M;
+            nudDist.Minimum = 50M;
+            nudDist.Maximum = 10000M;
+            nudDist.Value = 50M;
+
+            Label lblDistUnit = MakeLabel("м", normal, 236, y + 4);
+
+            btnStartDist.Click += delegate
+            {
+                try
+                {
+                    Host.comPort.doCommand((byte)Host.comPort.sysidcurrent, (byte)Host.comPort.compidcurrent,
+                        MAVLink.MAV_CMD.DO_SET_CAM_TRIGG_DIST, (float)nudDist.Value, 0, 0, 0, 0, 0, 0, false);
+                }
+                catch (Exception ex) { Console.WriteLine("PhotoPanel: старт по расстоянию — " + ex.Message); }
+            };
+
+            y += 34;
+            Button btnStop = new Button();
+            btnStop.Text = "Остановить фото";
+            btnStop.Location = new Point(10, y);
+            btnStop.Size = new Size(220, 28);
+            btnStop.FlatStyle = FlatStyle.Flat;
+            btnStop.ForeColor = Color.WhiteSmoke;
+            btnStop.Click += delegate
+            {
+                try
+                {
+                    Host.comPort.doCommand((byte)Host.comPort.sysidcurrent, (byte)Host.comPort.compidcurrent,
+                        MAVLink.MAV_CMD.IMAGE_STOP_CAPTURE, 0, 0, 0, 0, 0, 0, 0, false);
+                    Host.comPort.doCommand((byte)Host.comPort.sysidcurrent, (byte)Host.comPort.compidcurrent,
+                        MAVLink.MAV_CMD.DO_SET_CAM_TRIGG_DIST, 0, 0, 0, 0, 0, 0, 0, false);
+                }
+                catch (Exception ex) { Console.WriteLine("PhotoPanel: остановка — " + ex.Message); }
+            };
+
             _tab.Controls.Add(caption);
             _tab.Controls.Add(_lblCount);
             _tab.Controls.Add(btnReset);
@@ -247,6 +327,14 @@ namespace PhotoPanelTabPlugin
             _tab.Controls.Add(line4);
             _tab.Controls.Add(_lblCurWp);
             _tab.Controls.Add(_lblWpDist);
+            _tab.Controls.Add(line5);
+            _tab.Controls.Add(btnStartTime);
+            _tab.Controls.Add(nudTime);
+            _tab.Controls.Add(lblTimeUnit);
+            _tab.Controls.Add(btnStartDist);
+            _tab.Controls.Add(nudDist);
+            _tab.Controls.Add(lblDistUnit);
+            _tab.Controls.Add(btnStop);
 
             tc.TabPages.Add(_tab);
         }
