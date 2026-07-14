@@ -1,4 +1,4 @@
-﻿// PhotoPanelTab.cs — плагин Mission Planner "PhotoPanel 1.22_10.07.2026 (tab)" (для MP 1.3.83)
+﻿// PhotoPanelTab.cs — плагин Mission Planner "PhotoPanel 1.25_14.07.2026 (tab)" (для MP 1.3.83)
 // Вкладка "Фото" на экране Flight Data (внизу слева, рядом с Quick/Actions/...):
 // счётчик фотоснимков, телеметрия, средние интервалы съёмки.
 // Установка: положить в C:\Program Files (x86)\Mission Planner\plugins\ и перезапустить MP.
@@ -48,7 +48,7 @@ namespace PhotoPanelTabPlugin
         private int _fcCount = 0;
 
         public override string Name { get { return "Photo Panel Tab"; } }
-        public override string Version { get { return "1.22_10.07.2026"; } }
+        public override string Version { get { return "1.25_14.07.2026"; } }
         public override string Author { get { return "andrewkena"; } }
 
         public override bool Init()

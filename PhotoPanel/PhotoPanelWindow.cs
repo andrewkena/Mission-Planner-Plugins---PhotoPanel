@@ -1,4 +1,4 @@
-// PhotoPanelWindow.cs — плагин Mission Planner "PhotoPanel 1.22_10.07.2026 (window)" (для MP 1.3.83)
+// PhotoPanelWindow.cs — плагин Mission Planner "PhotoPanel 1.25_14.07.2026 (window)" (для MP 1.3.83)
 // Плавающее окно поверх Flight Data: счётчик фотоснимков, телеметрия, средние
 // интервалы съёмки. Окно можно свободно перетаскивать и держать поверх карты/HUD.
 // Установка: положить в C:\Program Files (x86)\Mission Planner\plugins\ и перезапустить MP.
@@ -49,7 +49,7 @@ namespace PhotoPanelWindowPlugin
         private int _fcCount = 0;
 
         public override string Name { get { return "Photo Panel Window"; } }
-        public override string Version { get { return "1.22_10.07.2026"; } }
+        public override string Version { get { return "1.25_14.07.2026"; } }
         public override string Author { get { return "andrewkena"; } }
 
         public override bool Init()
