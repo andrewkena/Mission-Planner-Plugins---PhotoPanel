@@ -37,6 +37,7 @@ namespace PhotoPanelWindowPlugin
         private int _intervals = 0;
         private double _vdop = -1;
         private object _lock = new object();
+        private volatile bool _exiting = false;
 
         public override string Name { get { return "Photo Panel Window"; } }
         public override string Version { get { return "1.22_10.07.2026"; } }
@@ -139,6 +140,7 @@ namespace PhotoPanelWindowPlugin
         {
             try
             {
+                _exiting = true;
                 if (_form != null && !_form.IsDisposed)
                     MainV2.instance.BeginInvoke((MethodInvoker)delegate { _form.Close(); });
             }
@@ -353,9 +355,19 @@ namespace PhotoPanelWindowPlugin
             _form.Controls.Add(btnStop);
             _form.Controls.Add(lblVersion);
 
-            // не убивать поток апдейтов при закрытии — просто скрыть окно
+            // Не убивать поток апдейтов при закрытии — просто скрыть окно.
+            // ВАЖНО: форма показана с Owner = MainV2.instance, а в WinForms
+            // отменённое закрытие owned-окна блокирует закрытие самого
+            // владельца — то есть само Mission Planner. Поэтому прячем окно
+            // только когда его закрывает сам пользователь (крестик этого
+            // окна); если закрывается MP (CloseReason != UserClosing) или
+            // плагин выгружается (Exit() выставляет _exiting) — даём окну
+            // закрыться по-настоящему.
             _form.FormClosing += delegate(object sender, FormClosingEventArgs e)
             {
+                if (_exiting || e.CloseReason != CloseReason.UserClosing)
+                    return;
+
                 e.Cancel = true;
                 _form.Hide();
             };
